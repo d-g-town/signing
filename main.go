@@ -4,20 +4,36 @@ import (
 	"log"
 	"math"
 	"net/http"
+	"os"
 	"runtime"
+	"strconv"
 )
 
 func main() {
-	// Start CPU-intensive background tasks
-	numCPU := runtime.NumCPU()
-	log.Printf("Starting %d CPU-intensive goroutines", numCPU*2)
+	// Get configuration from environment variables
+	numGoroutines := runtime.NumCPU() * 2
+	if env := os.Getenv("NUM_GOROUTINES"); env != "" {
+		if n, err := strconv.Atoi(env); err == nil {
+			numGoroutines = n
+		}
+	}
 
-	for i := 0; i < numCPU*2; i++ {
+	workload := 1000000
+	if env := os.Getenv("WORKLOAD_SIZE"); env != "" {
+		if n, err := strconv.Atoi(env); err == nil {
+			workload = n
+		}
+	}
+
+	// Start CPU-intensive background tasks
+	log.Printf("Starting %d CPU-intensive goroutines with workload size %d", numGoroutines, workload)
+
+	for i := 0; i < numGoroutines; i++ {
 		go func() {
 			var result float64
 			for {
 				// Perform expensive calculations continuously
-				for j := 0; j < 1000000; j++ {
+				for j := 0; j < workload; j++ {
 					result += math.Sqrt(float64(j)) * math.Sin(float64(j))
 				}
 			}
