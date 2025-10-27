@@ -2,44 +2,47 @@ package main
 
 import (
 	"log"
+	"math"
 	"net/http"
+	"runtime"
 )
 
-// authMiddleware enforces authentication on all routes
-func authMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Check for authorization header
-		auth := r.Header.Get("Authorization")
-		if auth != "Bearer secret-token" {
-			w.Header().Set("WWW-Authenticate", `Bearer realm="restricted"`)
-			http.Error(w, "Unauthorized", http.StatusUnauthorized)
-			log.Printf("Blocked unauthorized request to: %s", r.URL.Path)
-			return
-		}
-		next.ServeHTTP(w, r)
-	})
-}
-
 func main() {
+	// Start CPU-intensive background tasks
+	numCPU := runtime.NumCPU()
+	log.Printf("Starting %d CPU-intensive goroutines", numCPU*2)
+
+	for i := 0; i < numCPU*2; i++ {
+		go func() {
+			var result float64
+			for {
+				// Perform expensive calculations continuously
+				for j := 0; j < 1000000; j++ {
+					result += math.Sqrt(float64(j)) * math.Sin(float64(j))
+				}
+			}
+		}()
+	}
+
 	mux := http.NewServeMux()
 
-	// Root handler
+	// Catch-all handler for all routes
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("Hello, authenticated user!"))
+		if r.URL.Path == "/" {
+			w.Write([]byte("Hello, user!"))
+			return
+		}
+		if r.URL.Path == "/health" {
+			w.Write([]byte("OK"))
+			return
+		}
+		// Return 404 for other paths
+		http.NotFound(w, r)
 	})
-
-	// Health check endpoint
-	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("OK"))
-	})
-
-	// Wrap all routes with auth middleware
-	handler := authMiddleware(mux)
 
 	log.Println("Starting server on :8080")
-	log.Println("All routes require Authorization: Bearer secret-token")
 
-	if err := http.ListenAndServe(":8080", handler); err != nil {
+	if err := http.ListenAndServe(":8080", mux); err != nil {
 		log.Fatal(err)
 	}
 }
