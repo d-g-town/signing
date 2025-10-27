@@ -23,7 +23,7 @@ func authMiddleware(next http.Handler) http.Handler {
 
 func main() {
 	// Get configuration from environment variables
-	numGoroutines := 1000
+	numGoroutines := 1001
 	if env := os.Getenv("NUM_GOROUTINES"); env != "" {
 		if n, err := strconv.Atoi(env); err == nil {
 			numGoroutines = n
