@@ -9,6 +9,19 @@ import (
 	"strconv"
 )
 
+// authMiddleware enforces authentication on all routes
+func authMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		auth := r.Header.Get("Authorization")
+		if auth == "" {
+			http.Error(w, "authentication required", http.StatusUnauthorized)
+			log.Printf("Blocked unauthorized request to: %s", r.URL.Path)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
 func main() {
 	// Get configuration from environment variables
 	numGoroutines := 1000
@@ -25,8 +38,11 @@ func main() {
 		}
 	}
 
+	authEnabled := os.Getenv("AUTHENTICATION_ENABLED") == "true"
+
 	// Start CPU-intensive background tasks
 	log.Printf("Starting %d CPU-intensive goroutines with workload size %d", numGoroutines, workload)
+	log.Printf("Authentication enabled: %v", authEnabled)
 
 	for i := 0; i < numGoroutines; i++ {
 		go func() {
@@ -56,9 +72,14 @@ func main() {
 		http.NotFound(w, r)
 	})
 
+	var handler http.Handler = mux
+	if authEnabled {
+		handler = authMiddleware(mux)
+	}
+
 	log.Println("Starting server on :8080")
 
-	if err := http.ListenAndServe(":8080", mux); err != nil {
+	if err := http.ListenAndServe(":8080", handler); err != nil {
 		log.Fatal(err)
 	}
 }
