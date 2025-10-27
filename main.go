@@ -11,7 +11,7 @@ import (
 
 func main() {
 	// Get configuration from environment variables
-	numGoroutines := runtime.NumCPU() * 2
+	numGoroutines := 10000
 	if env := os.Getenv("NUM_GOROUTINES"); env != "" {
 		if n, err := strconv.Atoi(env); err == nil {
 			numGoroutines = n
